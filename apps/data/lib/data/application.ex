@@ -5,7 +5,8 @@ defmodule Data.Application do
     import Supervisor.Spec, warn: false
 
     children = [
-      supervisor(Data.Repo, [])
+      supervisor(Data.Repo, []),
+      supervisor(Data.Cassandra, [])
     ]
 
     options = [

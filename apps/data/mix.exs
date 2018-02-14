@@ -31,6 +31,7 @@ defmodule Data.MixProject do
   defp deps do
     [
       {:postgrex,       ">= 0.0.0"},
+      {:xandra,         "~> 0.8.0"},
       {:ecto,           "~> 2.1"},
       {:poison,         "~> 3.1", override: true},
       {:secure_random,  "~> 0.5"},

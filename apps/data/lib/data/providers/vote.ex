@@ -1,20 +1,21 @@
 defmodule Data.Providers.Vote do
-  require Logger
-  import Ecto.Query
+  @keyspace "ea28b544e93cff97e42b770e"
+  @table_name "votes"
 
-  alias Data.Repo
-  alias Data.Models.Vote
+  alias Data.Cassandra
 
   def get(user_id: user_id) do
-    Vote |> Repo.get_by(user_id: user_id)
+    statement = "SELECT user_id, movie_id, vote FROM #{@keyspace}.#{@table_name} WHERE user_id = ?;"
+    Cassandra.execute(statement, [{"text", user_id}])
   end
 
   def insert(params \\ %{}) do
-    case get(user_id: params[:user_id]) do
-      nil   -> %Vote{}
-      vote  -> vote
-    end
-    |> Vote.changeset(params)
-    |> Repo.insert_or_update()
+    statement = "INSERT INTO #{@keyspace}.#{@table_name} (user_id, movie_id, vote) VALUES (?, ?, ?);"
+    values    = [
+      {"text", params[:user_id]},
+      {"text", params[:movie_id]},
+      {"boolean", params[:vote]}
+    ]
+    Cassandra.execute(statement, values)
   end
 end
