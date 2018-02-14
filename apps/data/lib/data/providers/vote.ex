@@ -12,9 +12,9 @@ defmodule Data.Providers.Vote do
   def insert(params \\ %{}) do
     statement = "INSERT INTO #{@keyspace}.#{@table_name} (user_id, movie_id, vote) VALUES (?, ?, ?);"
     values    = [
-      {"text", params[:user_id]},
-      {"text", params[:movie_id]},
-      {"boolean", params[:vote]}
+      {"text", Map.get(params, "user_id")},
+      {"text", Map.get(params, "movie_id")},
+      {"boolean", Map.get(params, "vote")}
     ]
     Cassandra.execute(statement, values)
   end

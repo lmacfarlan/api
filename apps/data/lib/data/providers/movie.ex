@@ -12,8 +12,13 @@ defmodule Data.Providers.Movie do
     Cassandra.execute(statement, values)
   end
 
-  def all() do
+  def all(page_size, paging_state) do
+    IO.inspect {:paging_state, paging_state}
     statement = "SELECT movie_id, movie_title, popularity, ingest_date, ingested_info FROM #{@keyspace}.#{@table_name};"
-    Cassandra.execute(statement, [])
+    if paging_state == nil do
+      Cassandra.execute(statement, [], page_size: page_size)
+    else
+      Cassandra.execute(statement, [], page_size: page_size, paging_state: paging_state)
+    end
   end
 end
