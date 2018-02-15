@@ -14,7 +14,7 @@ defmodule Data.Providers.Vote do
     values    = [
       {"text", Map.get(params, "user_id")},
       {"text", Map.get(params, "movie_id")},
-      {"boolean", Map.get(params, "vote")}
+      {"boolean", Map.get(params, "vote")},
       {"timestamp", DateTime.to_unix(DateTime.utc_now(), :millisecond)}
     ]
     Cassandra.execute(statement, values)
