@@ -1,10 +1,12 @@
 defmodule Api.MixProject do
   use Mix.Project
 
+  @version File.read!("../../VERSION") |> String.trim
+
   def project do
     [
       app: :api,
-      version: "0.1.0",
+      version: @version,
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
@@ -24,6 +26,7 @@ defmodule Api.MixProject do
 
   defp deps do
     [
+      {:distillery, "1.5.1", runtime: false},
       {:cowboy, "1.1.2"},
       {:plug, "1.4.3"},
       {:pilot, git: "git@github.com:metismachine/pilot.git", branch: "development"},
