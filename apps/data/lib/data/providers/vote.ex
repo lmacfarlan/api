@@ -5,16 +5,17 @@ defmodule Data.Providers.Vote do
   alias Data.Cassandra
 
   def get(user_id: user_id) do
-    statement = "SELECT user_id, movie_id, vote FROM #{@keyspace}.#{@table_name} WHERE user_id = ?;"
+    statement = "SELECT user_id, movie_id, vote, vote_time FROM #{@keyspace}.#{@table_name} WHERE user_id = ?;"
     Cassandra.execute(statement, [{"text", user_id}])
   end
 
   def insert(params \\ %{}) do
-    statement = "INSERT INTO #{@keyspace}.#{@table_name} (user_id, movie_id, vote) VALUES (?, ?, ?);"
+    statement = "INSERT INTO #{@keyspace}.#{@table_name} (user_id, movie_id, vote, vote_time) VALUES (?, ?, ?, ?);"
     values    = [
       {"text", Map.get(params, "user_id")},
       {"text", Map.get(params, "movie_id")},
       {"boolean", Map.get(params, "vote")}
+      {"timestamp", DateTime.to_unix(DateTime.utc_now(), :millisecond)}
     ]
     Cassandra.execute(statement, values)
   end
