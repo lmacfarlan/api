@@ -8,9 +8,9 @@ Path.join(["rel", "plugins", "*.exs"])
 
 use Mix.Releases.Config,
     # This sets the default release built by `mix release`
-    default_release: :default,
+    default_release: :oddcarl,
     # This sets the default environment used by `mix release`
-    default_environment: Mix.env()
+    default_environment: :prod
 
 # For a full list of config options for both releases
 # and environments, visit https://hexdocs.pm/distillery/configuration.html
@@ -30,13 +30,13 @@ environment :dev do
   # dev mode.
   set dev_mode: true
   set include_erts: false
-  set cookie: :"M7_Vh3:]NB_8`Pr=IXnY;i>%}2|}.[f{yud/WC4sh~|aWzwQ8~3.(Ep=|6uQ`DRc"
+  set cookie: :"/[@ElvM3G=Di!R0Z6.&yu}A`Qx2T=3Qo]`yMLa,nrT&BPLL]EbKG_]IiQ?Fhft/x"
 end
 
 environment :prod do
   set include_erts: true
   set include_src: false
-  set cookie: :"3}%YC3h~{41lK=iR0v{&r)alk}A;g}IDHErOXM1a3(qLuJ:fPpJ}T,s*N27Vjn8Q"
+  set cookie: :"XEgm=)<7wsxPgZ>x176JR{WuwjZvzfKB=JIEkwR:Yi2LQ_|eZG)R1D/%s4,e.wQ]"
 end
 
 # You may define one or more releases in this file.
@@ -45,7 +45,7 @@ end
 # will be used by default
 
 release :oddcarl do
-  set version: "0.1.0"
+  set version: current_version(:api)
   set applications: [
     :runtime_tools,
     api: :permanent,
