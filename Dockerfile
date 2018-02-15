@@ -1,4 +1,4 @@
-FROM tsturzl/alpine-elixir:1.5.1 as builder
+FROM tsturzl/alpine-elixir:1.5.3 as builder
 
 ENV HOME=/opt/app/ TERM=xterm
 
