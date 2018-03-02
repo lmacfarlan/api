@@ -1,6 +1,7 @@
 defmodule Api.Router do
   use Pilot.Router
 
+  require Logger
   import Pilot.Responses, only: [json: 3]
 
   plug Api.Plug.ValidateContentType
@@ -8,11 +9,16 @@ defmodule Api.Router do
 
   get "/movies" do
     cursor = Map.get(conn.params, "cursor", nil)
+    idate =
+      conn.params
+      |> Map.get("ingest_date", nil)
+      |> ingest_date()
     case decode_cursor(cursor) do
       {:ok, decoded} ->
-        case Data.Providers.Movie.all(20, decoded) do
+        case Data.Providers.Movie.all(idate, 100, decoded) do
           {:ok, %Xandra.Page{} = page} ->
-            json(conn, :ok, %{data: Enum.to_list(page), cursor: Base.encode64(page.paging_state)})
+            results = Data.Providers.Movie.reject_adult_and_video(page)
+            json(conn, :ok, %{data: results, cursor: Base.encode64(page.paging_state)})
           {:error, reason} ->
             json(conn, 500, %{error: "unknown error fetching list: #{inspect(reason)}"})
         end
@@ -39,6 +45,17 @@ defmodule Api.Router do
     conn
     |> put_resp_content_type("application/json")
     |> json(:not_found, %{error: "not found"})
+  end
+
+  defp ingest_date(nil), do: Date.utc_today()
+  defp ingest_date(ingest_date) do
+    case Date.from_iso8601(ingest_date) do
+      {:ok, i_date} ->
+        i_date
+      {:error, reason} ->
+        Logger.debug(fn -> "Unable to parse `ingest_date`, using today's date because #{inspect reason}" end)
+        Date.utc_today()
+    end
   end
 
   defp decode_cursor(nil), do: {:ok, nil}

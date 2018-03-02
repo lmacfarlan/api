@@ -26,7 +26,7 @@ defmodule Data.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:xandra,         "~> 0.8.0"},
+      {:xandra,         "~> 0.9"},
       {:poison,         "3.1.0", override: true}
     ]
   end
