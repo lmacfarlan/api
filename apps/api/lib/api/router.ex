@@ -27,6 +27,28 @@ defmodule Api.Router do
     end
   end
 
+  get "/recommendations" do
+    conn
+    |> Map.get(:params, %{})
+    |> Map.get(:cursor)
+    |> decode_cursor()
+    |> case do
+      {:ok, decoded_cursor} ->
+        [paging_state: decoded_cursor]
+        |> Data.Providers.Recommendations.all()
+        |> handle_recommendations_resp()
+        |> (&json(conn, Map.get(&1, :status), &1)).()
+      {:error, reason} ->
+        status =
+          400
+        resp =
+          Map.new()
+          |> Map.put(:error, reason)
+          |> Map.put(:status, status)
+        json(conn, status, resp)
+    end
+  end
+
   post "/vote" do
     user_id =
       conn
@@ -63,6 +85,39 @@ defmodule Api.Router do
     case Base.decode64(cursor) do
       {:ok, decoded} -> {:ok, decoded}
       :error -> "Invalid cursor: #{inspect(cursor)}"
+    end
+  end
+
+  defp handle_recommendations_resp({:ok, %Xandra.Page{} = page}) do
+    paging_state =
+      Map.get(page, :paging_state)
+    Map.new()
+    |> put_encoded_cursor(paging_state)
+    |> Map.put(:recommendations, Enum.to_list(page))
+    |> Map.put(:status, 200)
+  end
+
+  defp handle_recommendations_resp({:error, reason}) do
+    Map.new()
+    |> Map.put(:error, reason)
+    |> Map.put(:status, 400)
+  end
+
+  defp handle_recommendations_resp(resp) do
+    Logger.debug(fn -> "Unknown recommendations response: #{inspect(resp)}" end)
+    Map.new()
+    |> Map.put(:error, "Unknown error occurred when fetching recommendations")
+    |> Map.put(:status, 500)
+  end
+
+  defp put_encoded_cursor(map, nil), do: map
+  defp put_encoded_cursor(map, cursor) do
+    case Base.encode64(cursor) do
+      {:ok, encoded_cursor} ->
+        Map.put(map, :cursor, encoded_cursor)
+      {:error, reason} ->
+        Logger.debug(fn -> "Error while encoding cursor: #{inspect(reason)}" end)
+        map
     end
   end
 end
