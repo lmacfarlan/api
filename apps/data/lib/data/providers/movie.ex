@@ -3,8 +3,10 @@ defmodule Data.Providers.Movie do
 
   require Logger
 
+  @default_page_size 100
   @keyspace "ea28b544e93cff97e42b770e"
   @table_name "movie_list_pop_sorted"
+  @movie_info_table_name "movie_info"
 
   @doc """
   Gets all movies for a given `ingest_date`, filtering out `adult` and `video` entries.
@@ -26,7 +28,6 @@ defmodule Data.Providers.Movie do
 
   """
   def all(ingest_date, page_size, paging_state, retry_count \\ 7) do
-    IO.inspect {:paging_state, paging_state}
     statement = "SELECT movie_id, movie_title, popularity, ingest_date, adult, video FROM #{@keyspace}.#{@table_name} where ingest_date = ?;"
     values = [
       {"date", ingest_date}
@@ -41,7 +42,7 @@ defmodule Data.Providers.Movie do
     # If we didn't find anything, go back one day until we do
     # or we run out of retries
     case results do
-      {:error, reason} ->
+      {:error, _reason} ->
         results
       {:ok, movies} ->
         case Enum.empty?(movies) && retry_count > 0 do
@@ -53,6 +54,23 @@ defmodule Data.Providers.Movie do
     end
   end
 
+  def get([movie_ids: movie_ids], opts \\ []) do
+    query =
+      movie_ids
+      |> prepare_list()
+      |> get_by_movie_ids_query()
+    params =
+      []
+    opts =
+      default_opts()
+      |> Keyword.merge(opts)
+      # Filter out keywords with nil value
+      |> Enum.filter(&!!elem(&1, 1))
+    Cassandra.execute(query, params, opts)
+  end
+
+  def default_page_size, do: @default_page_size
+
   def reject_adult_and_video(%Xandra.Page{} = page) do
     # ** NOTE ** By passing the Xandra.Page struct through
     # an Enum function, it is being realized, if you remove
@@ -62,5 +80,23 @@ defmodule Data.Providers.Movie do
     |> Enum.reject(fn(r) ->
         Map.get(r, "adult") || Map.get(r, "video")
       end)
+  end
+
+
+  # Private
+
+
+  defp default_opts, do: [page_size: @default_page_size]
+
+  defp get_by_movie_ids_query(prepared_movie_ids),
+    do: "SELECT * from #{@keyspace}.#{@movie_info_table_name} WHERE movie_id IN (#{prepared_movie_ids})"
+
+  def prepare_list([item | _ ] = list) when is_binary(item),
+    do: prepare_list(list, "\'")
+
+  def prepare_list(list, surrounding_character \\ "") do
+    list
+    |> Stream.map(& "#{surrounding_character}#{&1}#{surrounding_character}")
+    |> Enum.join(",")
   end
 end

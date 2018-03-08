@@ -33,6 +33,8 @@ defmodule Data.Providers.Recommendations do
     Cassandra.execute(query, params, opts)
   end
 
+  def default_page_size, do: @default_page_size
+
 
   # Private
 
