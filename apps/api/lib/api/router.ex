@@ -1,7 +1,10 @@
 defmodule Api.Router do
+  @moduledoc false
+
   use Pilot.Router
 
   require Logger
+
   import Pilot.Responses, only: [json: 3]
 
   plug Api.Plug.ValidateContentType
@@ -30,7 +33,7 @@ defmodule Api.Router do
   get "/recommendations" do
     conn
     |> Map.get(:params, %{})
-    |> Map.get(:cursor)
+    |> Map.get("cursor")
     |> decode_cursor()
     |> case do
       {:ok, decoded_cursor} ->
@@ -55,7 +58,7 @@ defmodule Api.Router do
       |> get_req_header("X-API-Token")
     case user_id do
       "" -> json(conn, :bad_request, %{error: "No API token provided"})
-      uid ->
+      _uid ->
         case Data.Providers.Vote.insert(conn.params) do
           {:ok, _} -> json(conn, :created, %{data: %{success: true}})
           {:error, reason} -> json(conn, :bad_request, %{error: "#{inspect(reason)}"})
@@ -88,13 +91,37 @@ defmodule Api.Router do
     end
   end
 
+  defp fetch_movies_from_recommendations_page(page) do
+    page_size =
+      Data.Providers.Recommendations.default_page_size()
+    page
+    |> Enum.map(&Map.get(&1, "movie_id", ""))
+    |> (&Data.Providers.Movie.get([movie_ids: &1], page_size: page_size)).()
+  end
+
   defp handle_recommendations_resp({:ok, %Xandra.Page{} = page}) do
-    paging_state =
-      Map.get(page, :paging_state)
-    Map.new()
-    |> put_encoded_cursor(paging_state)
-    |> Map.put(:recommendations, Enum.to_list(page))
-    |> Map.put(:status, 200)
+    case fetch_movies_from_recommendations_page(page) do
+      {:ok, %Xandra.Page{} = movies_page} ->
+        movies_lookup =
+          movies_page
+          |> Stream.map(& {Map.get(&1, "movie_id"), &1})
+          |> Map.new()
+        recommendations =
+          Enum.map(page, fn recommendation ->
+            recommendation
+            |> Map.get("movie_id")
+            |> (&Map.get(movies_lookup, &1)).()
+            |> (&Map.put(recommendation, :movie, &1)).()
+          end)
+        paging_state =
+          Map.get(page, :paging_state)
+        Map.new()
+        |> put_encoded_cursor(paging_state)
+        |> Map.put(:recommendations, recommendations)
+        |> Map.put(:status, 200)
+      resp ->
+        handle_recommendations_resp(resp)
+    end
   end
 
   defp handle_recommendations_resp({:error, reason}) do
@@ -112,12 +139,8 @@ defmodule Api.Router do
 
   defp put_encoded_cursor(map, nil), do: map
   defp put_encoded_cursor(map, cursor) do
-    case Base.encode64(cursor) do
-      {:ok, encoded_cursor} ->
-        Map.put(map, :cursor, encoded_cursor)
-      {:error, reason} ->
-        Logger.debug(fn -> "Error while encoding cursor: #{inspect(reason)}" end)
-        map
-    end
+    cursor
+    |> Base.encode64()
+    |> (&Map.put(map, :cursor, &1)).()
   end
 end
