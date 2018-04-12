@@ -1,4 +1,1 @@
 # Oddcarl
-
-**TODO: Add description**
-
